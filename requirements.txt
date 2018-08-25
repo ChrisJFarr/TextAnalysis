@@ -1,0 +1,2 @@
+nameparser==0.5.8
+nltk==3.3
