@@ -40,6 +40,14 @@ count_vectorizer = CountVectorizer(ngram_range=(1, 1),
                                    min_df=.05)
 train_count_vectorized = count_vectorizer.fit_transform(train_text_norm)
 
+# TODO get the array and show the data train_count_vectorized
+dir(train_count_vectorized)
+train_count_vectorized_array = train_count_vectorized.toarray()
+train_count_vectorized_array[0, :]
+# TODO show the features that were used
+count_vectorizer.get_feature_names()
+# TODO show feature importance? Help the audience understand the inputs and outputs
+
 # Cross-validate Predict
 model = RandomForestRegressor(n_estimators=10, max_depth=5)
 predict = cross_val_predict(model, train_count_vectorized, train_target)
@@ -70,14 +78,14 @@ print("RMSE: %.2f " % np.sqrt(mean_squared_error(train_target, predict)))
 
 # Tuning parameters (pipeline?)
 
-pipeline = Pipeline([("vect", TfidfVectorizer(max_features=7000)),
+pipeline = Pipeline([("vect", TfidfVectorizer(max_features=10000)),
                      ("model", RandomForestRegressor(random_state=0))])
 
 parameters = {
     "vect__ngram_range": [(1, 2)],
-    "vect__max_df": [.95],
-    "vect__min_df": [.05],
-    "model__n_estimators": [60, 100],
+    "vect__max_df": [1.],
+    "vect__min_df": [.04],
+    "model__n_estimators": [50],
     "model__max_depth": [30]
 }
 
@@ -89,7 +97,6 @@ stop = time.time()
 print("total time: ", stop-start)
 
 # Analyze results
-
 pprint.pprint(grid.best_params_)
 
 # Generate predictions
@@ -102,4 +109,37 @@ print("Accuracy: %.2f percent" % (accuracy_score(train_target, predict_processed
 # Analyze Root Mean Squared Error
 print("RMSE: %.2f " % np.sqrt(mean_squared_error(train_target, predict)))
 
+
+# Tune without TFIDF
+
+pipeline = Pipeline([("vect", CountVectorizer(max_features=10000)),
+                     ("model", RandomForestRegressor(random_state=0))])
+
+parameters = {
+    "vect__ngram_range": [(1, 2)],
+    "vect__max_df": [1.],
+    "vect__min_df": [.05],
+    "model__n_estimators": [50],
+    "model__max_depth": [30]
+}
+
+grid = GridSearchCV(pipeline, parameters, cv=5, n_jobs=3)
+
+start = time.time()
+grid.fit(train_text_norm, train_target)
+stop = time.time()
+print("total time: ", stop-start)
+
+# Analyze results
+pprint.pprint(grid.best_params_)
+
+# Generate predictions
+model = grid.best_estimator_
+predict = cross_val_predict(model, train_text_norm, train_target, cv=5, n_jobs=3)
+predict_processed = [int(round(i)) for i in predict]
+
+# Analyze accuracy
+print("Accuracy: %.2f percent" % (accuracy_score(train_target, predict_processed) * 100))
+# Analyze Root Mean Squared Error
+print("RMSE: %.2f " % np.sqrt(mean_squared_error(train_target, predict)))
 
